@@ -1,11 +1,10 @@
 package com.splaytree.haskeye;
 
-import java.util.AbstractSet;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Stack;
+import java.util.*;
 
-public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
+public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T> {
+    //Stack for iterator
+    Stack<Node<T>> stack;
 
     private static class Node<T> extends Object {
         final T value;
@@ -25,7 +24,7 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
 
     private int size = 0;
 
-    @Override
+
     public boolean add(T t) {
         Node<T> closest = find(t);
         int comparison = closest == null ? -1 : t.compareTo(closest.value);
@@ -46,6 +45,7 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
             newNode.parent = closest;
         }
         size++;
+        stack.add(newNode);
         return true;
     }
 
@@ -70,32 +70,22 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
     }
 
 
-    @Override
     public boolean remove(Object o) {
         if (o == null) {
             throw new IllegalArgumentException();
         }
         if (!this.contains(0)) return false;
-        T t = (T) o;
-        Node node = findDel(t);
-        if (node.left.value == t) {
-            Node i = node.left.right;
-            node.left = node.left.left;
-            //Передать ветвь i кому-то
-            findEmptyRight().right = i;
-        } else {
-            Node i = node.left.left;
-            node.right = node.right.right;
-            //Передать ветвь i кому-то
-            if (i != null) {
-                findEmptyLeft().left = i;
-            }
+        T target = (T) o;
+        BinaryTreeIterator i = new BinaryTreeIterator();
+        Node<T> del = (Node<T>) i.next();
+        while (del.value != target) {
+            del = (Node<T>) i.next();
         }
+        i.remove();
         return true;
     }
 
 
-    @Override
     public boolean contains(Object o) {
         @SuppressWarnings("unchecked")
         T t = (T) o;
@@ -113,8 +103,8 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
         if (start.left == null) {
             return start;
         } else {
-            Node i = findEmptyLeft(start.left);
-            Node j = findEmptyLeft(start.right);
+            Node<T> i = findEmptyLeft(start.left);
+            Node<T> j = findEmptyLeft(start.right);
             if (height(i) <= height(j))
                 return i;
             else return j;
@@ -131,8 +121,8 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
         if (start.right == null) {
             return start;
         } else {
-            Node i = findEmptyLeft(start.left);
-            Node j = findEmptyLeft(start.right);
+            Node<T> i = findEmptyLeft(start.left);
+            Node<T> j = findEmptyLeft(start.right);
             if (height(i) <= height(j))
                 return i;
             else return j;
@@ -161,7 +151,9 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
 
     private Node<T> find(T value) {
         if (root == null) return null;
-        return find(root, value);
+        Node<T> founded = find(root, value);
+        splay(founded);
+        return founded;
     }
 
     private Node<T> find(Node<T> start, T value) {
@@ -177,18 +169,88 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
         }
     }
 
+
+    //Splay block next
+
+    /**
+     * Splay реалтзован поворотами при проходе от найденной вершины вверх вплоть до root
+     * И последующей заменой, соответсвенно его на данную вершину
+     * В реализации осуществляется проход по пути от корня к целевой вершине и/или обратно.
+     * А значит по  Лемме, путь состоит из O(log(n)) вершин.
+     * Обработка каждой вершины имеет сложность O(1).
+     * Таким образом, сложность приведенных выше операции splay — O(log(n))
+     */
+    Node<T> grandParent(Node<T> node) {
+        return node.parent.parent;
+    }
+
+    private void rotateLeft(Node<T> node) {
+        Node<T> parent = node.parent;
+        Node<T> rightOne = node.right;
+        if (parent != null)
+            if (parent.left == node)
+                parent.left = rightOne;
+            else
+                parent.right = rightOne;
+        Node<T> tmp = rightOne.left;
+        rightOne.left = node;
+        node.right = tmp;
+        node.parent = rightOne;
+        rightOne.parent = parent;
+        if (node.right != null)
+            node.parent = node;
+    }
+
+    private void rotateRight(Node<T> node) {
+        Node<T> parent = node.parent;
+        Node<T> leftOne = node.left;
+        if (parent != null)
+            if (parent.right == node)
+                parent.right = leftOne;
+            else
+                parent.left = leftOne;
+        Node<T> tmp = leftOne.right;
+        leftOne.right = node;
+        node.left = tmp;
+        node.parent = leftOne;
+        leftOne.parent = parent;
+        if (node.left != null)
+            node.parent = node;
+    }
+
+    private void splay(Node<T> node) {
+        while (node.parent != null)
+            if (node == node.parent.left) {
+                if (grandParent(node) == null)
+                    rotateRight(node.parent);
+                else if (node.parent == grandParent(node).left) {
+                    rotateRight(grandParent(node));
+                    rotateRight(node.parent);
+                } else {
+                    rotateRight(node.parent);
+                    rotateLeft(node.parent);
+                }
+            } else {
+                if (grandParent(node) == null)
+                    rotateLeft(node.parent);
+                else if (node.parent == grandParent(node).right) {
+                    rotateLeft(grandParent(node));
+                    rotateLeft(node.parent);
+                } else {
+                    rotateLeft(node.parent);
+                    rotateRight(node.parent);
+                }
+            }
+    }
+
+
+    //Iterator block next
     //Stack for the iterator realization
-    Stack<Node> stack;
+
 
     public class BinaryTreeIterator implements Iterator<T> {
 
         private BinaryTreeIterator() {
-            // Init added
-            Stack stack = new Stack<Node>();
-            while (root != null) {
-                stack.push(root);
-                root = root.left;
-            }
         }
 
 
@@ -198,8 +260,7 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
 
 
         public T next() {
-            Node node = stack.pop();
-            @SuppressWarnings("unchecked")
+            Node<T> node = stack.pop();
             T result = (T) node.value;
             if (node.right != null) {
                 node = node.right;
@@ -214,17 +275,16 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> extends AbstractS
 
         public void remove() {
             if (hasNext()) {
-                Node n = (find(next()));
-                @SuppressWarnings("unchecked")
+                Node<T> n = (find(next()));
                 T t = (T) n.value;
-                Node node = findDel(t);
+                Node<T> node = findDel(t);
                 if (node.left.value == n) {
-                    Node i = node.left.right;
+                    Node<T> i = node.left.right;
                     node.left = node.left.left;
                     //Передать ветвь i кому-то
                     findEmptyRight().right = i;
                 } else {
-                    Node i = node.left.left;
+                    Node<T> i = node.left.left;
                     node.right = node.right.right;
                     //Передать ветвь i кому-то
                     if (i != null) {
