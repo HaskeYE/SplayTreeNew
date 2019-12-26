@@ -1,12 +1,15 @@
 package com.splaytree.haskeye;
 
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
-public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T> {
+public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     //Stack for iterator
-    Stack<Node<T>> stack;
+    ArrayDeque<Node<T>> stack;
 
-    private static class Node<T> extends Object {
+    private static class Node<T> {
         final T value;
 
         Node<T> parent = null;
@@ -24,7 +27,32 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T>
 
     private int size = 0;
 
+    @Override
+    public int size() {
+        return size;
+    }
 
+    @Override
+    public boolean isEmpty() {
+        return (size == 0);
+    }
+
+    @Override
+    public Iterator iterator(){
+        return new BinaryTreeIterator();
+    }
+
+    @Override
+    public void forEach(Consumer<? super T> action) {
+
+    }
+
+    @Override
+    public Object[] toArray() {
+        return new Object[0];
+    }
+
+    @Override
     public boolean add(T t) {
         Node<T> closest = find(t);
         int comparison = closest == null ? -1 : t.compareTo(closest.value);
@@ -47,6 +75,62 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T>
         size++;
         stack.add(newNode);
         return true;
+    }
+
+    @Override
+    public boolean containsAll(Collection c) {
+        boolean b = true;
+        for (T t : (Iterable<T>) c) {
+            if (!this.contains(t)) b = false;
+        }
+        return  b;
+    }
+
+    @Override
+    public boolean addAll(Collection c) {
+        boolean b = true;
+        for (T t : (Iterable<T>) c) {
+            b = this.add(t);
+            if (!b) break;
+        }
+        return  b;
+    }
+
+    @Override
+    public boolean removeAll(Collection c) {
+        boolean b = true;
+        for (T t : (Iterable<T>) c) {
+            b = this.remove(t);
+            if (!b) break;
+        }
+        return  b;
+    }
+
+    @Override
+    public void clear() {
+        stack.clear();
+        size = 0;
+    }
+
+    @Override
+    public Spliterator<T> spliterator() {
+        return null;
+    }
+
+    @Override
+    public Stream<T> stream() {
+        return null;
+    }
+
+    @Override
+    public Stream<T> parallelStream() {
+        return null;
+    }
+
+
+    @Override
+    public boolean retainAll(Collection c) {
+        return false;
     }
 
     public boolean checkInvariant() {
@@ -74,7 +158,7 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T>
         if (o == null) {
             throw new IllegalArgumentException();
         }
-        if (!this.contains(0)) return false;
+        if (!this.contains(o)) return false;
         T target = (T) o;
         BinaryTreeIterator i = new BinaryTreeIterator();
         Node<T> del = (Node<T>) i.next();
@@ -85,6 +169,16 @@ public abstract class SplayTreeCustom<T extends Comparable<T>> implements Set<T>
         return true;
     }
 
+    @Override
+    public boolean removeIf(Predicate<? super T> filter) {
+        return false;
+    }
+
+
+    @Override
+    public Object[] toArray(Object[] a) {
+        return new Object[0];
+    }
 
     public boolean contains(Object o) {
         @SuppressWarnings("unchecked")
