@@ -1,5 +1,7 @@
 package com.splaytree.haskeye;
 
+import com.sun.org.apache.xpath.internal.objects.XNull;
+
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -7,20 +9,23 @@ import java.util.stream.Stream;
 
 public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     //Stack for iterator
-    ArrayDeque<Node<T>> stack;
+    ArrayDeque<Node<T>> stack = new ArrayDeque<>();
 
-    private static class Node<T> {
-        final T value;
+    public static class Node<T> {
+        public Node(T value) {
+            this.value = value;
+            this.key = value.hashCode();
+        }
+
+        T value = null;
+
+        int key = 0;
 
         Node<T> parent = null;
 
         Node<T> left = null;
 
         Node<T> right = null;
-
-        Node(T value) {
-            this.value = value;
-        }
     }
 
     private Node<T> root = null;
@@ -38,7 +43,7 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     }
 
     @Override
-    public Iterator iterator(){
+    public Iterator iterator() {
         return new BinaryTreeIterator();
     }
 
@@ -49,32 +54,44 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
 
     @Override
     public Object[] toArray() {
-        return new Object[0];
+        return stack.toArray();
     }
 
     @Override
     public boolean add(T t) {
-        Node<T> closest = find(t);
-        int comparison = closest == null ? -1 : t.compareTo(closest.value);
-        if (comparison == 0) {
-            return false;
-        }
+        int key = t.hashCode();
+        // Create a new Node and initialize it
         Node<T> newNode = new Node<T>(t);
-        if (closest == null) {
-            root = newNode;
-        } else {
-            if (comparison < 0) {
-                assert closest.left == null;
-                closest.left = newNode;
+
+        if (!this.contains(t)) {
+            if (root == null) {
+                root = newNode;
             } else {
-                assert closest.right == null;
-                closest.right = newNode;
+                Node<T> focusNode = root;
+                Node<T> parent;
+                while (true) {
+                    parent = focusNode;
+                    // Check if the new node should go on
+                    // the left side of the parent node
+                    if (key < focusNode.key) {
+                        // Switch focus to the left child
+                        focusNode = focusNode.left;
+                        if (focusNode == null) {
+                            parent.left = newNode;
+                        }
+                    } else {
+                        focusNode = focusNode.right;
+                        if (focusNode == null) {
+                            parent.right = newNode;
+                        }
+                    }
+                }
             }
-            newNode.parent = closest;
+            size++;
+            stack.add(newNode);
+            return true;
         }
-        size++;
-        stack.add(newNode);
-        return true;
+        return false;
     }
 
     @Override
@@ -83,7 +100,7 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         for (T t : (Iterable<T>) c) {
             if (!this.contains(t)) b = false;
         }
-        return  b;
+        return b;
     }
 
     @Override
@@ -93,7 +110,7 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
             b = this.add(t);
             if (!b) break;
         }
-        return  b;
+        return b;
     }
 
     @Override
@@ -103,12 +120,13 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
             b = this.remove(t);
             if (!b) break;
         }
-        return  b;
+        return b;
     }
 
     @Override
     public void clear() {
         stack.clear();
+        root = null;
         size = 0;
     }
 
@@ -158,14 +176,15 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         if (o == null) {
             throw new IllegalArgumentException();
         }
+        if (size == 1) clear();
         if (!this.contains(o)) return false;
         T target = (T) o;
         BinaryTreeIterator i = new BinaryTreeIterator();
-        Node<T> del = (Node<T>) i.next();
-        while (del.value != target) {
-            del = (Node<T>) i.next();
+        T del = i.next();
+        while (del != target) {
+            del = i.next();
         }
-        i.remove();
+        remove(i.value);
         return true;
     }
 
@@ -181,10 +200,18 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     }
 
     public boolean contains(Object o) {
-        @SuppressWarnings("unchecked")
-        T t = (T) o;
-        Node<T> closest = find(t);
-        return closest != null && t.compareTo(closest.value) == 0;
+        if (size == 0) return false;
+        if (size == 1) {
+            return root.value == (T) o;
+        } else {
+            T t = (T) o;
+            BinaryTreeIterator i = new BinaryTreeIterator();
+            T fin = i.next();
+            while (fin != t || !stack.isEmpty()) {
+                fin = i.next();
+            }
+            return fin == t;
+        }
     }
 
     //Finding node with empty left branch
@@ -244,23 +271,15 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     }
 
     private Node<T> find(T value) {
-        if (root == null) return null;
-        Node<T> founded = find(root, value);
-        splay(founded);
-        return founded;
-    }
-
-    private Node<T> find(Node<T> start, T value) {
-        int comparison = value.compareTo(start.value);
-        if (comparison == 0) {
-            return start;
-        } else if (comparison < 0) {
-            if (start.left == null) return start;
-            return find(start.left, value);
-        } else {
-            if (start.right == null) return start;
-            return find(start.right, value);
-        }
+        if (contains(value)) {
+            BinaryTreeIterator i = new BinaryTreeIterator();
+            T fin = i.next();
+            while (fin != value || !stack.isEmpty()) {
+                fin = i.next();
+            }
+            splay(i.node);
+            return root;
+        } else throw new NoSuchElementException();
     }
 
 
@@ -343,48 +362,40 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
 
 
     public class BinaryTreeIterator implements Iterator<T> {
+        T value = null;
+        Node<T> node = null;
 
         private BinaryTreeIterator() {
         }
 
 
         public boolean hasNext() {
-            return !stack.isEmpty();
+            return stack.isEmpty();
         }
 
 
         public T next() {
-            Node<T> node = stack.pop();
-            T result = (T) node.value;
-            if (node.right != null) {
-                node = node.right;
-                while (node != null) {
-                    stack.push(node);
-                    node = node.left;
-                }
-            }
-            return result;
+            if (hasNext()) {
+                Node<T> node = stack.pop();
+                value = node.value;
+                this.node = node;
+                return (T) node.value;
+            } else throw new NoSuchElementException();
         }
 
 
         public void remove() {
-            if (hasNext()) {
-                Node<T> n = (find(next()));
-                T t = (T) n.value;
-                Node<T> node = findDel(t);
-                if (node.left.value == n) {
-                    Node<T> i = node.left.right;
-                    node.left = node.left.left;
-                    //Передать ветвь i кому-то
-                    findEmptyRight().right = i;
+            if (size == 1) clear();
+            if (contains(value)) {
+
+                if (root.left.key > root.right.key) {
+                    root.right.parent = root.left;
+                    root = root.left;
                 } else {
-                    Node<T> i = node.left.left;
-                    node.right = node.right.right;
-                    //Передать ветвь i кому-то
-                    if (i != null) {
-                        findEmptyLeft().left = i;
-                    }
+                    root.left.parent = root.right;
+                    root = root.right;
                 }
+                size -= 1;
             } else throw new NoSuchElementException();
         }
     }
