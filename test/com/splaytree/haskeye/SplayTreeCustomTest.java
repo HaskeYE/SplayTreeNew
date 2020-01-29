@@ -31,4 +31,20 @@ public class SplayTreeCustomTest {
         tree.remove("abc");
         assertEquals(0, tree.size());
     }
+
+    @Test
+    public void treeContains() {
+        SplayTreeCustom<String> tree = new SplayTreeCustom<>();
+        tree.add("abc");
+        assertEquals(true, tree.contains("abc"));
+    }
+
+    @Test
+    public void treeFind() {
+        SplayTreeCustom<String> tree = new SplayTreeCustom<>();
+        tree.add("abc");
+        tree.add("abb");
+        tree.find("abb");
+        assertEquals(true, tree.root.value == "abb");
+    }
 }

@@ -28,9 +28,9 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         Node<T> right = null;
     }
 
-    private Node<T> root = null;
+    public Node<T> root = null;
 
-    private int size = 0;
+    public int size = 0;
 
     @Override
     public int size() {
@@ -59,40 +59,41 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
 
     @Override
     public boolean add(T t) {
-        int key = t.hashCode();
         // Create a new Node and initialize it
         Node<T> newNode = new Node<T>(t);
-
-        if (!this.contains(t)) {
-            if (root == null) {
-                root = newNode;
-            } else {
-                Node<T> focusNode = root;
-                Node<T> parent;
-                while (true) {
-                    parent = focusNode;
-                    // Check if the new node should go on
-                    // the left side of the parent node
-                    if (key < focusNode.key) {
-                        // Switch focus to the left child
-                        focusNode = focusNode.left;
-                        if (focusNode == null) {
-                            parent.left = newNode;
-                        }
-                    } else {
-                        focusNode = focusNode.right;
-                        if (focusNode == null) {
-                            parent.right = newNode;
-                        }
-                    }
-                }
-            }
+        newNode.key = t.hashCode();
+        if (root == null) {
+            root = newNode;
             size++;
             stack.add(newNode);
             return true;
+        } else {
+            if (!this.contains(t)) {
+                addRecursive(root, t);
+                size++;
+                stack.add(newNode);
+                return true;
+            }
         }
         return false;
     }
+
+    private Node<T> addRecursive(Node<T> current, T value) {
+        if (current == null) {
+            return new Node(value);
+        }
+
+        if (value.hashCode() < current.key) {
+            current.left = addRecursive(current.left, value);
+        } else if (value.hashCode() > current.key) {
+            current.right = addRecursive(current.right, value);
+        } else {
+            // value already exists
+            return current;
+        }
+        return current;
+    }
+
 
     @Override
     public boolean containsAll(Collection c) {
@@ -200,18 +201,19 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
     }
 
     public boolean contains(Object o) {
-        if (size == 0) return false;
-        if (size == 1) {
-            return root.value == (T) o;
-        } else {
-            T t = (T) o;
-            BinaryTreeIterator i = new BinaryTreeIterator();
-            T fin = i.next();
-            while (fin != t || !stack.isEmpty()) {
-                fin = i.next();
-            }
-            return fin == t;
+        return containsRecursive(root, o.hashCode());
+    }
+
+    private boolean containsRecursive(Node current, int key) {
+        if (current == null) {
+            return false;
         }
+        if (key == current.key) {
+            return true;
+        }
+        return key < current.key
+                ? containsRecursive(current.left, key)
+                : containsRecursive(current.right, key);
     }
 
     //Finding node with empty left branch
@@ -270,16 +272,24 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         throw new NoSuchElementException();
     }
 
-    private Node<T> find(T value) {
-        if (contains(value)) {
-            BinaryTreeIterator i = new BinaryTreeIterator();
-            T fin = i.next();
-            while (fin != value || !stack.isEmpty()) {
-                fin = i.next();
-            }
-            splay(i.node);
-            return root;
-        } else throw new NoSuchElementException();
+    public Node<T> find(T value) {
+        Node<T> splayNode = findRecursive(root, value);
+        splay(splayNode);
+        root = splayNode;
+        return (root);
+    }
+
+    private Node<T> findRecursive(Node<T> node, T value) {
+        if (node == null) {
+            return null;
+        }
+        if (value.hashCode() < node.key) {
+            return findRecursive(node.left, value);
+        } else if (value.hashCode() > node.key) {
+            return findRecursive(node.right, value);
+        } else {
+            return node;
+        }
     }
 
 
