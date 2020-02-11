@@ -7,7 +7,8 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
+//AbstractMap implement
+public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
     //Stack for iterator
     ArrayDeque<Node<T>> stack = new ArrayDeque<>();
 
@@ -114,15 +115,6 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         return b;
     }
 
-    @Override
-    public boolean removeAll(Collection c) {
-        boolean b = true;
-        for (T t : (Iterable<T>) c) {
-            b = this.remove(t);
-            if (!b) break;
-        }
-        return b;
-    }
 
     @Override
     public void clear() {
@@ -131,30 +123,6 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         size = 0;
     }
 
-    @Override
-    public Spliterator<T> spliterator() {
-        return null;
-    }
-
-    @Override
-    public Stream<T> stream() {
-        return null;
-    }
-
-    @Override
-    public Stream<T> parallelStream() {
-        return null;
-    }
-
-
-    @Override
-    public boolean retainAll(Collection c) {
-        return false;
-    }
-
-    public boolean checkInvariant() {
-        return root == null || checkInvariant(root);
-    }
 
     public int height() {
         return height(root);
@@ -172,33 +140,51 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         return 1 + Math.max(height(node.left), height(node.right));
     }
 
+    //Переделан как Вы сказали, по примерам с geeksforgeeks
 
     public boolean remove(Object o) {
         if (o == null) {
             throw new IllegalArgumentException();
         }
-        if (size == 1) clear();
-        if (!this.contains(o)) return false;
-        T target = (T) o;
-        BinaryTreeIterator i = new BinaryTreeIterator();
-        T del = i.next();
-        while (del != target) {
-            del = i.next();
+        if (root == null) throw new NullPointerException("Дерево пусто");
+
+        find((T) o);
+        if (root.value == o) {
+            if (root.left == null) {
+                root.right.parent = null;
+                root = root.right;
+                return true;
+            } else {
+                //Разделение на два поддерева пуиём разрыва связи левого потомка root ним и splay
+                //исключительно внутри левого поддерева максимального его эл-та, что приводит к созданию поддерева
+                //для присоединения к нему правого поддерева с удалением связей со старым root из оного
+                T newRoot = findMaxFrom(root.left);
+                Node<T> right = root.right;
+                root.left.parent = null;
+                find(newRoot);
+                right.parent = root;
+                root.right = right;
+                return true;
+            }
+        } else return false;
+    }
+
+    public T findMaxFrom(Node<T> node) {
+        int maxKey;
+        T max = findRecursiveMax(node.right, node.value);
+        return (max);
+    }
+
+    private T findRecursiveMax(Node<T> node, T value) {
+        if (node == null) {
+            return null;
         }
-        remove(i.value);
-        return true;
+        if (node.key > value.hashCode()) value = node.value;
+        if (node.right == null) return value;
+        else
+            return findRecursiveMax(node.right, value);
     }
 
-    @Override
-    public boolean removeIf(Predicate<? super T> filter) {
-        return false;
-    }
-
-
-    @Override
-    public Object[] toArray(Object[] a) {
-        return new Object[0];
-    }
 
     public boolean contains(Object o) {
         return containsRecursive(root, o.hashCode());
@@ -283,6 +269,8 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
         if (node == null) {
             return null;
         }
+        if (node.left == null && node.right == null)
+            return node;
         if (value.hashCode() < node.key) {
             return findRecursive(node.left, value);
         } else if (value.hashCode() > node.key) {
@@ -395,18 +383,26 @@ public class SplayTreeCustom<T extends Comparable<T>> implements Collection<T> {
 
 
         public void remove() {
-            if (size == 1) clear();
-            if (contains(value)) {
+            T value = node.value;
+            if (value == null) {
+                throw new IllegalArgumentException();
+            }
+            if (root == null) throw new NullPointerException("Дерево пусто");
 
-                if (root.left.key > root.right.key) {
-                    root.right.parent = root.left;
-                    root = root.left;
-                } else {
-                    root.left.parent = root.right;
+            find(value);
+            if (root.value == value) {
+                if (root.left == null) {
+                    root.right.parent = null;
                     root = root.right;
+                } else {
+                    T newRoot = findMaxFrom(root.left);
+                    Node<T> right = root.right;
+                    root.left.parent = null;
+                    find(newRoot);
+                    right.parent = root;
+                    root.right = right;
                 }
-                size -= 1;
-            } else throw new NoSuchElementException();
+            }
         }
     }
 }
