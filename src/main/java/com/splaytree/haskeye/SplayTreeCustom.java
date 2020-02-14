@@ -148,11 +148,17 @@ public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
         }
         if (root == null) throw new NullPointerException("Дерево пусто");
 
+        if (size <= 1) {
+            clear();
+            return true;
+        }
+
         find((T) o);
         if (root.value == o) {
             if (root.left == null) {
                 root.right.parent = null;
                 root = root.right;
+                size -= 1;
                 return true;
             } else {
                 //Разделение на два поддерева пуиём разрыва связи левого потомка root ним и splay
@@ -164,6 +170,7 @@ public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
                 find(newRoot);
                 right.parent = root;
                 root.right = right;
+                size -= 1;
                 return true;
             }
         } else return false;
@@ -330,28 +337,30 @@ public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
     }
 
     private void splay(Node<T> node) {
-        while (node.parent != null)
-            if (node == node.parent.left) {
-                if (grandParent(node) == null)
-                    rotateRight(node.parent);
-                else if (node.parent == grandParent(node).left) {
-                    rotateRight(grandParent(node));
-                    rotateRight(node.parent);
+        if (size > 1) {
+            while (node.parent != null)
+                if (node == node.parent.left) {
+                    if (grandParent(node) == null)
+                        rotateRight(node.parent);
+                    else if (node.parent == grandParent(node).left) {
+                        rotateRight(grandParent(node));
+                        rotateRight(node.parent);
+                    } else {
+                        rotateRight(node.parent);
+                        rotateLeft(node.parent);
+                    }
                 } else {
-                    rotateRight(node.parent);
-                    rotateLeft(node.parent);
+                    if (grandParent(node) == null)
+                        rotateLeft(node.parent);
+                    else if (node.parent == grandParent(node).right) {
+                        rotateLeft(grandParent(node));
+                        rotateLeft(node.parent);
+                    } else {
+                        rotateLeft(node.parent);
+                        rotateRight(node.parent);
+                    }
                 }
-            } else {
-                if (grandParent(node) == null)
-                    rotateLeft(node.parent);
-                else if (node.parent == grandParent(node).right) {
-                    rotateLeft(grandParent(node));
-                    rotateLeft(node.parent);
-                } else {
-                    rotateLeft(node.parent);
-                    rotateRight(node.parent);
-                }
-            }
+        }
     }
 
 
@@ -394,6 +403,7 @@ public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
                 if (root.left == null) {
                     root.right.parent = null;
                     root = root.right;
+                    size -= 1;
                 } else {
                     T newRoot = findMaxFrom(root.left);
                     Node<T> right = root.right;
@@ -401,6 +411,7 @@ public class SplayTreeCustom<T extends Comparable<T>> extends AbstractSet<T> {
                     find(newRoot);
                     right.parent = root;
                     root.right = right;
+                    size -= 1;
                 }
             }
         }

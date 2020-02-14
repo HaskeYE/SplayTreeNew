@@ -33,6 +33,17 @@ public class SplayTreeCustomTest {
     }
 
     @Test
+    public void treeRemoveBigger() {
+        SplayTreeCustom<String> tree = new SplayTreeCustom<>();
+        tree.add("abc");
+        tree.add("abc");
+        tree.add("abd");
+        tree.add("abf");
+        tree.remove("abc");
+        assertEquals(true, tree.root.value == "abd");
+    }
+
+    @Test
     public void treeContains() {
         SplayTreeCustom<String> tree = new SplayTreeCustom<>();
         tree.add("abc");
@@ -46,5 +57,15 @@ public class SplayTreeCustomTest {
         tree.add("abb");
         tree.find("abb");
         assertEquals(true, tree.root.value == "abb");
+    }
+
+    @Test
+    public void treeFindLast() {
+        SplayTreeCustom<String> tree = new SplayTreeCustom<>();
+        tree.add("abc");
+        tree.add("abb");
+        tree.add("abf");
+        tree.find("abh");
+        assertEquals(true, tree.root.value == "abf");
     }
 }
